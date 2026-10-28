@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Équivalent Pinte (EP) - Drink Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        darkBg: '#0f172a',
+                        cardBg: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0b0f19;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .beer-gradient {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .text-glow {
+            text-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 flex flex-col justify-between">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-50 glass-card border-b border-slate-800 px-4 py-3 shadow-lg">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-xl beer-gradient flex items-center justify-center text-slate-950 font-black text-xl shadow-md shadow-amber-500/20">
+                    🍻
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg leading-none tracking-tight text-white">EP Tracker</h1>
+                    <span class="text-[10px] text-amber-400 font-semibold tracking-wider uppercase">Équivalent Pinte</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button id="infoBtn" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition" title="Comment ça marche ?">
+                    <i class="fa-solid fa-circle-info text-lg"></i>
+                </button>
+                <button id="exportSessionBtn" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition" title="Sauvegarder / Exporter la session">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+                <button id="importSessionBtn" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition" title="Charger / Importer une session">
+                    <i class="fa-solid fa-upload"></i>
+                </button>
+                <input type="file" id="importFileInput" accept=".json" class="hidden" />
+                <button id="resetSessionBtn" class="p-2 rounded-lg bg-red-950/60 text-red-400 hover:bg-red-900/80 hover:text-white border border-red-800/40 transition" title="Réinitialiser la soirée">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto w-full px-4 pt-4 space-y-5 flex-1">
+
+        <!-- Active Friend Selector / Add Friend Header -->
+        <section class="glass-card rounded-2xl p-4 border border-slate-800">
+            <div class="flex justify-between items-center mb-3">
+                <label class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-check text-amber-400"></i> Qui boit ?
+                </label>
+                <button id="openAddFriendModal" class="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 bg-amber-400/10 px-2.5 py-1 rounded-full border border-amber-400/20">
+                    <i class="fa-solid fa-user-plus"></i> Ajouter
+                </button>
+            </div>
+
+            <!-- Horizontal Scrollable Friends List -->
+            <div id="friendsList" class="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+                <!-- Dynamic List of Friends as Chips -->
+            </div>
+        </section>
+
+        <!-- Selected User EP Dashboard & Drunkometer Card -->
+        <section id="userStatsCard" class="glass-card rounded-2xl p-5 border border-slate-700/60 relative overflow-hidden transition-all duration-300">
+            <div class="flex items-center justify-between relative z-10">
+                <div>
+                    <h2 id="currentFriendName" class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>Chargement...</span>
+                    </h2>
+                    <div id="statusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mt-1.5 shadow-sm">
+                        <!-- Dynamic Threshold Badge -->
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <div class="flex items-baseline justify-end gap-1">
+                        <span id="currentFriendEP" class="text-4xl font-extrabold text-amber-400 tracking-tight text-glow">0.0</span>
+                        <span class="text-sm font-bold text-slate-400">EP</span>
+                    </div>
+                    <p id="pureAlcoholText" class="text-[11px] text-slate-400 mt-0.5">0cl d'alcool pur</p>
+                </div>
+            </div>
+
+            <!-- EP Visual Gauge Bar -->
+            <div class="mt-4 pt-3 border-t border-slate-800/80">
+                <div class="flex justify-between text-[10px] text-slate-400 mb-1 font-semibold">
+                    <span>Progression Soirée</span>
+                    <span id="gaugeTargetText">Seuil : 70 EP</span>
+                </div>
+                <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden p-0.5 border border-slate-800">
+                    <div id="epGaugeBar" class="beer-gradient h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab Controls: Express vs Custom vs Leaderboard -->
+        <div class="flex bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-sm font-bold">
+            <button id="tabPresetsBtn" class="flex-1 py-2 rounded-lg text-center transition bg-amber-500 text-slate-950 shadow-md">
+                <i class="fa-solid fa-bolt mr-1"></i> Express
+            </button>
+            <button id="tabCustomBtn" class="flex-1 py-2 rounded-lg text-center text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-sliders mr-1"></i> Sur-Mesure
+            </button>
+            <button id="tabLeaderboardBtn" class="flex-1 py-2 rounded-lg text-center text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-trophy mr-1"></i> Classement
+            </button>
+        </div>
+
+        <!-- TAB CONTENT 1: QUICK PRESETS BY DRINK CATEGORY -->
+        <section id="tabPresets" class="space-y-3">
+            <div class="grid grid-cols-2 gap-2.5" id="presetsGrid">
+                <!-- Dynamically rendered category drink cards -->
+            </div>
+        </section>
+
+        <!-- TAB CONTENT 2: CUSTOM DRINK ENTRY & COCKTAIL SLIDER -->
+        <section id="tabCustom" class="glass-card rounded-2xl p-4 border border-slate-800 hidden space-y-4">
+            
+            <!-- Interactive Cocktail Ratio Slider -->
+            <div class="space-y-3 pb-3 border-b border-slate-800">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-cocktail text-amber-400"></i> Cocktail Sur-Mesure (Proportions)
+                    </h3>
+                    <span id="cocktailEPPreview" class="text-xs font-black text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">0.0 EP</span>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-slate-400 mb-1">Nom du cocktail (optionnel)</label>
+                    <input type="text" id="cocktailName" placeholder="ex: Ricard-Eau, Mojito, Vodka Redbull..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Base d'Alcool Fort</label>
+                        <select id="spiritPresetSelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                            <option value="45" selected>Ricard / Anis (45%)</option>
+                            <option value="40">Vodka (40%)</option>
+                            <option value="37.5">Gin (37.5%)</option>
+                            <option value="40">Whisky (40%)</option>
+                            <option value="custom">Autre / Personnalisé</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-slate-400 mb-1">Degré Alcool Base (%)</label>
+                        <input type="number" id="baseSpiritABV" value="45" min="1" max="80" step="0.5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between text-xs font-bold text-slate-300">
+                        <span>Ratio Alcool / Soft :</span>
+                        <span id="ratioLabel" class="text-amber-400 font-extrabold">1:3 (Moyen)</span>
+                    </div>
+
+                    <input type="range" id="cocktailRatioSlider" min="1" max="4" step="1" value="2" class="w-full accent-amber-500 cursor-pointer">
+
+                    <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                        <span>1:4 (Léger)</span>
+                        <span>1:3</span>
+                        <span>1:2</span>
+                        <span>1:1 (Chargé)</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="col-span-2">
+                        <label class="block text-[10px] text-slate-400 mb-0.5">Volume Verre (cl)</label>
+                        <input type="number" id="cocktailVolume" value="25" min="5" step="5" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white">
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center text-[10px] text-slate-400 px-1">
+                    <span>Degré estimé du mélange : <strong id="cocktailABVText" class="text-amber-400">11.3% ABV</strong></span>
+                </div>
+
+                <div>
+                    <button id="addCocktailBtn" class="w-full beer-gradient text-slate-950 font-bold py-2.5 rounded-lg text-xs shadow transition active:scale-[0.98] flex items-center justify-center gap-1.5">
+                        🍹 Consommer ce Cocktail
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Drink Input Form -->
+            <div class="space-y-3 pt-1">
+                <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-wine-glass text-amber-400"></i> Boisson Totalement Libre
+                </h3>
+
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Nom du verre / boisson</label>
+                    <input type="text" id="customName" placeholder="ex: IPA Artisanale, Rhum Ambré..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Volume (cl)</label>
+                        <input type="number" id="customVolume" placeholder="ex: 50" min="1" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Degré d'Alcool (%)</label>
+                        <input type="number" id="customABV" placeholder="ex: 8.5" min="0" step="0.1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                </div>
+
+                <!-- Preview EP value before logging -->
+                <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                    <span class="text-slate-400">Calcul estimé :</span>
+                    <span id="customCalcPreview" class="font-bold text-amber-400">0.0 EP</span>
+                </div>
+
+                <div>
+                    <button id="addCustomDrinkBtn" class="w-full beer-gradient text-slate-950 font-extrabold py-2.5 rounded-xl shadow-lg shadow-amber-500/20 active:scale-[0.98] transition flex items-center justify-center gap-2 text-xs">
+                        <i class="fa-solid fa-plus-circle text-sm"></i> Consommer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Saved Custom Drinks Section -->
+            <div class="pt-3 border-t border-slate-800 space-y-2">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                    <span><i class="fa-solid fa-book-bookmark text-amber-400 mr-1"></i> Mes Recettes Enregistrées</span>
+                    <span id="savedRecipesCount" class="text-[10px] text-slate-500">0</span>
+                </h4>
+                <div id="savedRecipesList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <!-- Dynamic saved recipes rendered here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT 3: LEADERBOARD -->
+        <section id="tabLeaderboard" class="glass-card rounded-2xl p-4 border border-slate-800 hidden space-y-3">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-ranking-star text-amber-400"></i> Classement du Foyer
+                </h3>
+                <span class="text-xs text-slate-400" id="totalPartyEP">Total soirée: 0 EP</span>
+            </div>
+
+            <div id="leaderboardList" class="space-y-2">
+                <!-- Dynamically filled with friends ranked by EP -->
+            </div>
+        </section>
+
+        <!-- Drink History Log -->
+        <section class="glass-card rounded-2xl p-4 border border-slate-800 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Historique des verres
+                </h3>
+                <span id="logCount" class="text-xs text-slate-500 font-semibold">0 verre(s)</span>
+            </div>
+
+            <div id="drinkLog" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <!-- Log items rendered here -->
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="mt-8 text-center text-xs text-slate-500 px-4 space-y-1">
+        <p>1 Équivalent Pinte (EP) = 50cl à 10% ABV (soit 0,5cl d'alcool pur).</p>
+        <p class="text-[11px] text-slate-600">⚠️ À consommer avec modération. Restez maître de vous-même.</p>
+    </footer>
+
+    <!-- MODAL: FORMAT SELECTOR FOR DRINK TYPES -->
+    <div id="formatModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-xs rounded-2xl p-5 border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <h3 id="formatModalTitle" class="font-bold text-white text-base flex items-center gap-2">
+                    <!-- Dynamic Title -->
+                </h3>
+                <button id="closeFormatModal" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-400">Choisissez la quantité / le format :</p>
+            <div id="formatOptionsList" class="space-y-2">
+                <!-- Dynamic format buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD FRIEND -->
+    <div id="addFriendModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-sm rounded-2xl p-5 border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-lg text-white">Ajouter un participant</h3>
+                <button id="closeAddFriendModal" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Prénom ou Surnom</label>
+                <input type="text" id="newFriendName" placeholder="ex: Thomas, Sarah..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400">
+            </div>
+            <button id="saveFriendBtn" class="w-full beer-gradient text-slate-950 font-bold py-2.5 rounded-xl">
+                Ajouter à la fête
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: FORMULA & INFO -->
+    <div id="infoModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card w-full max-w-md rounded-2xl p-5 border border-slate-700 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                    🍻 C'est quoi l'Équivalent Pinte (EP) ?
+                </h3>
+                <button id="closeInfoModal" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <p>L'<strong>Équivalent Pinte (EP)</strong> est une unité de mesure festive permettant d'harmoniser les différents types d'alcools consommés.</p>
+                
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 font-mono text-amber-300 space-y-1">
+                    <p class="font-bold">Formule :</p>
+                    <p>EP = Volume (cl) × (Degré % / 100) × 2</p>
+                    <p class="text-[11px] text-slate-400 font-sans mt-1">Base de référence : 50cl à 10% d'alcool = 10 EP.</p>
+                </div>
+
+                <h4 class="font-bold text-slate-200 text-sm pt-2">Échelle du Drunkomètre :</h4>
+                <ul class="space-y-1.5 text-[11px]">
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">0 - 5 EP</span> Frais / Opérationnel</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">5.1 - 10 EP</span> Un peu pompette</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">10.1 - 20 EP</span> Bien entamé(e)</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold">20.1 - 30 EP</span> Complètement cuit(e)</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-bold">30.1 - 40 EP</span> 🚨 Blackout Imminent</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 font-bold">40.1 - 50 EP</span> 🧘 Philosophe du Trottoir</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-bold">50.1 - 60 EP</span> 👽 En comm. avec les aliens</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-pink-500/20 text-pink-400 font-bold">60.1 - 70 EP</span> 👻 Légende Urbaine / Statut Fantôme</li>
+                    <li class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-rose-600/30 text-rose-300 font-bold">> 70 EP</span> 📞 A appelé son ex à 4h du mat</li>
+                </ul>
+            </div>
+
+            <button id="closeInfoModalBtn" class="w-full bg-slate-800 text-white font-bold py-2.5 rounded-xl hover:bg-slate-700">
+                J'ai compris !
+            </button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Grouped drink categories with formats
+        const DRINK_CATEGORIES = [
+            {
+                id: 'cat_blonde',
+                name: 'Bière Blonde',
+                abv: 5.0,
+                icon: '🍺',
+                formats: [
+                    { name: 'Galopin', vol: 12.5 },
+                    { name: 'Demi', vol: 25 },
+                    { name: 'Canette', vol: 33 },
+                    { name: 'Pinte', vol: 50 },
+                    { name: 'Chope / Pitcher', vol: 100 }
+                ]
+            },
+            {
+                id: 'cat_paix_dieu',
+                name: 'Paix-Dieu',
+                abv: 10.0,
+                icon: '🌕',
+                formats: [
+                    { name: 'Galopin', vol: 12.5 },
+                    { name: 'Demi', vol: 25 },
+                    { name: 'Canette / Bouteille', vol: 33 },
+                    { name: 'Pinte', vol: 50 }
+                ]
+            },
+            {
+                id: 'cat_strong',
+                name: 'Bière Forte / IPA',
+                abv: 8.0,
+                icon: '🍻',
+                formats: [
+                    { name: 'Demi', vol: 25 },
+                    { name: 'Canette', vol: 33 },
+                    { name: 'Pinte', vol: 50 }
+                ]
+            },
+            {
+                id: 'cat_vin',
+                name: 'Vin (Rouge / Blanc)',
+                abv: 12.0,
+                icon: '🍷',
+                formats: [
+                    { name: 'Petit Verre', vol: 10 },
+                    { name: 'Verre Standard', vol: 12.5 },
+                    { name: 'Grand Verre', vol: 18 },
+                    { name: 'Pichet', vol: 50 }
+                ]
+            },
+            {
+                id: 'cat_champ',
+                name: 'Champagne / Prosecco',
+                abv: 12.5,
+                icon: '🥂',
+                formats: [
+                    { name: 'Coupe / Flûte', vol: 12.5 },
+                    { name: 'Verre Généreux', vol: 15 }
+                ]
+            },
+            {
+                id: 'cat_shot',
+                name: 'Shot Alcool Fort',
+                abv: 40.0,
+                icon: '🥃',
+                formats: [
+                    { name: 'Shot Simple', vol: 3 },
+                    { name: 'Shot Double', vol: 5 }
+                ]
+            }
+        ];
+
+        // Ratio preset definitions for slider
+        const RATIO_PRESETS = {
+            1: { ratioText: '1:4', label: '1:4 (Léger)', factor: 0.20 },
+            2: { ratioText: '1:3', label: '1:3 (Moyen)', factor: 0.25 },
+            3: { ratioText: '1:2', label: '1:2 (Fort)', factor: 0.3333 },
+            4: { ratioText: '1:1', label: '1:1 (Chargé)', factor: 0.50 }
+        };
+
+        // Drunkometer Threshold Status Mapping
+        const THRESHOLDS = [
+            { max: 5.0, title: 'Frais', emoji: '🌱', color: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' },
+            { max: 10.0, title: 'Pompette', emoji: '😏', color: 'bg-blue-500/20 text-blue-400 border border-blue-500/30' },
+            { max: 20.0, title: 'Bien entamé(e)', emoji: '🥳', color: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' },
+            { max: 30.0, title: 'Complètement cuit(e)', emoji: '🤪', color: 'bg-orange-500/20 text-orange-400 border border-orange-500/30' },
+            { max: 40.0, title: 'Blackout Imminent', emoji: '🚨', color: 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' },
+            { max: 50.0, title: 'Philosophe du Trottoir', emoji: '🧘', color: 'bg-purple-500/20 text-purple-400 border border-purple-500/30' },
+            { max: 60.0, title: 'En comm. avec les aliens', emoji: '👽', color: 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' },
+            { max: 70.0, title: 'Légende Urbaine / Fantôme', emoji: '👻', color: 'bg-pink-500/20 text-pink-400 border border-pink-500/30' },
+            { max: Infinity, title: 'A appelé son ex à 4h du mat', emoji: '📞', color: 'bg-rose-600/30 text-rose-300 border border-rose-500/50 animate-bounce' }
+        ];
+
+        // State variables stored in LocalStorage
+        let appData = {
+            friends: ['Alex', 'Tatis'],
+            activeFriend: 'Alex',
+            customRecipes: [],
+            logs: []
+        };
+
+        // Initialize App
+        window.onload = function() {
+            loadFromStorage();
+            renderCategoryGrid();
+            renderFriendsList();
+            renderSavedRecipes();
+            updateCocktailPreview();
+            updateUI();
+            setupEventListeners();
+        };
+
+        // Utility: Calculate EP from volume and ABV
+        function calculateEP(volumeCl, abvPercent) {
+            return Number((volumeCl * (abvPercent / 100) * 2).toFixed(2));
+        }
+
+        // Persistence
+        function saveToStorage() {
+            localStorage.setItem('ep_tracker_data', JSON.stringify(appData));
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem('ep_tracker_data');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                    if (appData.friends) {
+                        appData.friends = appData.friends.map(f => f === 'Sam' ? 'Tatis' : f);
+                        if (appData.activeFriend === 'Sam') appData.activeFriend = 'Tatis';
+                    }
+                    if (appData.logs) {
+                        appData.logs.forEach(l => { if (l.friend === 'Sam') l.friend = 'Tatis'; });
+                    }
+                    if (!appData.customRecipes) {
+                        appData.customRecipes = [];
+                    }
+                } catch (e) {
+                    console.error("Erreur de chargement du stockage local", e);
+                }
+            }
+        }
+
+        // Render Drink Category Grid
+        function renderCategoryGrid() {
+            const grid = document.getElementById('presetsGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            DRINK_CATEGORIES.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'glass-card p-3 rounded-xl text-left border border-slate-800 hover:border-amber-500/50 active:scale-95 transition flex flex-col justify-between h-24 group relative overflow-hidden';
+                btn.onclick = () => openFormatModal(cat);
+
+                btn.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="text-2xl">${cat.icon}</span>
+                        <span class="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">${cat.abv}% ABV</span>
+                    </div>
+                    <div>
+                        <div class="font-bold text-xs text-white group-hover:text-amber-300 transition">${cat.name}</div>
+                        <div class="text-[10px] text-slate-400">${cat.formats.length} formats au choix</div>
+                    </div>
+                `;
+                grid.appendChild(btn);
+            });
+        }
+
+        // Open Format Selection Submenu Modal
+        function openFormatModal(category) {
+            const modal = document.getElementById('formatModal');
+            const titleEl = document.getElementById('formatModalTitle');
+            const listEl = document.getElementById('formatOptionsList');
+
+            titleEl.innerHTML = `${category.icon} ${category.name} <span class="text-xs text-amber-400 font-bold">(${category.abv}%)</span>`;
+            listEl.innerHTML = '';
+
+            category.formats.forEach(fmt => {
+                const ep = calculateEP(fmt.vol, category.abv);
+                const btn = document.createElement('button');
+                btn.className = 'w-full glass-card hover:bg-slate-800 p-3 rounded-xl border border-slate-700 flex justify-between items-center text-xs transition active:scale-95';
+                btn.onclick = () => {
+                    addDrink(`${category.name} (${fmt.name})`, fmt.vol, category.abv);
+                    modal.classList.add('hidden');
+                };
+
+                btn.innerHTML = `
+                    <div>
+                        <div class="font-bold text-white">${fmt.name}</div>
+                        <div class="text-[10px] text-slate-400">${fmt.vol}cl</div>
+                    </div>
+                    <span class="font-black text-amber-400 bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20">${ep} EP</span>
+                `;
+                listEl.appendChild(btn);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        // Render Active Friends Selection
+        function renderFriendsList() {
+            const container = document.getElementById('friendsList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            appData.friends.forEach(friend => {
+                const epTotal = getFriendEPTotal(friend);
+                const isActive = friend === appData.activeFriend;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = `inline-flex items-center rounded-full text-xs font-bold transition ${
+                    isActive 
+                    ? 'beer-gradient text-slate-950 shadow-md shadow-amber-500/20 scale-105' 
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`;
+
+                wrapper.innerHTML = `
+                    <button onclick="selectFriend('${friend}')" class="px-3 py-1.5 flex items-center gap-1.5 outline-none">
+                        <span>${friend}</span>
+                        <span class="${isActive ? 'bg-slate-950/20' : 'bg-slate-900'} px-1.5 py-0.5 rounded-full text-[10px] font-black">${epTotal} EP</span>
+                    </button>
+                    <button onclick="removeFriend('${friend}')" class="pr-2.5 pl-0.5 text-xs opacity-60 hover:opacity-100 hover:text-red-400 transition" title="Supprimer ${friend}">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                container.appendChild(wrapper);
+            });
+        }
+
+        function selectFriend(name) {
+            appData.activeFriend = name;
+            saveToStorage();
+            renderFriendsList();
+            updateUI();
+        }
+
+        function removeFriend(name) {
+            if (confirm(`Voulez-vous vraiment supprimer ${name} ainsi que ses consommations ?`)) {
+                appData.friends = appData.friends.filter(f => f !== name);
+                appData.logs = appData.logs.filter(log => log.friend !== name);
+
+                if (appData.activeFriend === name) {
+                    appData.activeFriend = appData.friends.length > 0 ? appData.friends[0] : '';
+                }
+
+                saveToStorage();
+                renderFriendsList();
+                updateUI();
+            }
+        }
+
+        function getFriendEPTotal(friendName) {
+            return Number(appData.logs
+                .filter(log => log.friend === friendName)
+                .reduce((sum, log) => sum + log.ep, 0)
+                .toFixed(2));
+        }
+
+        // Render Saved Custom Recipes
+        function renderSavedRecipes() {
+            const listEl = document.getElementById('savedRecipesList');
+            const countEl = document.getElementById('savedRecipesCount');
+            if (!listEl || !countEl) return;
+            listEl.innerHTML = '';
+
+            countEl.innerText = appData.customRecipes.length;
+
+            if (appData.customRecipes.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-3 text-slate-500 text-xs italic">
+                        Aucune recette personnalisée enregistrée. Créez-en une ci-dessus !
+                    </div>
+                `;
+                return;
+            }
+
+            appData.customRecipes.forEach(recipe => {
+                const ep = calculateEP(recipe.vol, recipe.abv);
+                const item = document.createElement('div');
+                item.className = 'glass-card p-2.5 rounded-xl border border-slate-800 flex justify-between items-center text-xs hover:border-amber-500/40 transition';
+                
+                item.innerHTML = `
+                    <div class="flex-1 cursor-pointer" onclick="addDrink('${recipe.name.replace(/'/g, "\\'")}', ${recipe.vol}, ${recipe.abv})">
+                        <div class="font-bold text-white flex items-center gap-1.5">
+                            <span>${recipe.name}</span>
+                            <span class="text-[10px] text-amber-400 font-bold bg-amber-400/10 px-1.5 py-0.2 rounded border border-amber-400/20">${ep} EP</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">${recipe.vol}cl • ${recipe.abv}%</div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button onclick="addDrink('${recipe.name.replace(/'/g, "\\'")}', ${recipe.vol}, ${recipe.abv})" class="bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-slate-950 font-bold px-2 py-1 rounded-lg transition text-[11px]">
+                            + Boire
+                        </button>
+                        <button onclick="deleteSavedRecipe(${recipe.id})" class="text-slate-500 hover:text-red-400 p-1.5 transition" title="Supprimer la recette">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        function saveCustomRecipe(name, vol, abv) {
+            const recipe = {
+                id: Date.now(),
+                name: name,
+                vol: vol,
+                abv: abv
+            };
+            appData.customRecipes.unshift(recipe);
+            saveToStorage();
+            renderSavedRecipes();
+        }
+
+        function deleteSavedRecipe(recipeId) {
+            appData.customRecipes = appData.customRecipes.filter(r => r.id !== recipeId);
+            saveToStorage();
+            renderSavedRecipes();
+        }
+
+        // Cocktail Slider Logic Preview & Calculation
+        function getCocktailParams() {
+            const sliderVal = document.getElementById('cocktailRatioSlider')?.value || 2;
+            const preset = RATIO_PRESETS[sliderVal] || RATIO_PRESETS[2];
+            const baseABV = parseFloat(document.getElementById('baseSpiritABV')?.value) || 40;
+            const vol = parseFloat(document.getElementById('cocktailVolume')?.value) || 25;
+            
+            const effectiveABV = Number((baseABV * preset.factor).toFixed(1));
+            const ep = calculateEP(vol, effectiveABV);
+
+            return { preset, baseABV, vol, effectiveABV, ep };
+        }
+
+        function updateCocktailPreview() {
+            const params = getCocktailParams();
+            const ratioLabel = document.getElementById('ratioLabel');
+            const cocktailABVText = document.getElementById('cocktailABVText');
+            const cocktailEPPreview = document.getElementById('cocktailEPPreview');
+
+            if (ratioLabel) ratioLabel.innerText = params.preset.label;
+            if (cocktailABVText) cocktailABVText.innerText = `${params.effectiveABV}% ABV`;
+            if (cocktailEPPreview) cocktailEPPreview.innerText = `${params.ep} EP`;
+        }
+
+        // Add Drink Log
+        function addDrink(name, vol, abv) {
+            if (!appData.activeFriend) {
+                alert("Veuillez d'abord sélectionner ou ajouter un ami !");
+                return;
+            }
+
+            const ep = calculateEP(vol, abv);
+            const newLog = {
+                id: Date.now(),
+                friend: appData.activeFriend,
+                drinkName: name,
+                vol: parseFloat(vol),
+                abv: parseFloat(abv),
+                ep: ep,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            appData.logs.unshift(newLog);
+            saveToStorage();
+            renderFriendsList();
+            updateUI();
+            
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function deleteLog(logId) {
+            appData.logs = appData.logs.filter(log => log.id !== logId);
+            saveToStorage();
+            renderFriendsList();
+            updateUI();
+        }
+
+        // Update overall UI stats, history & gauges
+        function updateUI() {
+            const currentFriend = appData.activeFriend || 'Aucun ami';
+            const currentEP = currentFriend !== 'Aucun ami' ? getFriendEPTotal(currentFriend) : 0;
+            
+            const currentFriendNameEl = document.getElementById('currentFriendName');
+            if (currentFriendNameEl) currentFriendNameEl.innerText = currentFriend;
+            
+            const currentFriendEPEl = document.getElementById('currentFriendEP');
+            if (currentFriendEPEl) currentFriendEPEl.innerText = currentEP.toFixed(1);
+            
+            const pureAlcoholCl = (currentEP * 0.5).toFixed(1);
+            const pureAlcoholTextEl = document.getElementById('pureAlcoholText');
+            if (pureAlcoholTextEl) pureAlcoholTextEl.innerText = `${pureAlcoholCl}cl d'alcool pur`;
+
+            const status = THRESHOLDS.find(t => currentEP <= t.max) || THRESHOLDS[THRESHOLDS.length - 1];
+            const badgeEl = document.getElementById('statusBadge');
+            if (badgeEl) {
+                badgeEl.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mt-1.5 shadow-sm ${status.color}`;
+                badgeEl.innerHTML = `${status.emoji} ${status.title}`;
+            }
+
+            const gaugeTargetTextEl = document.getElementById('gaugeTargetText');
+            if (gaugeTargetTextEl) gaugeTargetTextEl.innerText = "Seuil : 70 EP";
+
+            const gaugeBarEl = document.getElementById('epGaugeBar');
+            if (gaugeBarEl) {
+                const gaugePercent = Math.min((currentEP / 70) * 100, 100);
+                gaugeBarEl.style.width = `${gaugePercent}%`;
+            }
+
+            renderLogHistory();
+            renderLeaderboard();
+        }
+
+        function renderLogHistory() {
+            const logContainer = document.getElementById('drinkLog');
+            const countEl = document.getElementById('logCount');
+            if (!logContainer || !countEl) return;
+            logContainer.innerHTML = '';
+
+            countEl.innerText = `${appData.logs.length} verre(s)`;
+
+            if (appData.logs.length === 0) {
+                logContainer.innerHTML = `
+                    <div class="text-center py-6 text-slate-500 text-xs">
+                        Aucune boisson enregistrée pour l'instant. Santés ! 🥂
+                    </div>
+                `;
+                return;
+            }
+
+            appData.logs.forEach(log => {
+                const item = document.createElement('div');
+                item.className = 'glass-card p-2.5 rounded-xl border border-slate-800 flex justify-between items-center text-xs';
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <div class="text-slate-400 font-mono text-[10px]">${log.timestamp}</div>
+                        <div>
+                            <div class="font-bold text-white">${log.drinkName} <span class="text-amber-400">(${log.ep} EP)</span></div>
+                            <div class="text-[10px] text-slate-400">${log.friend} • ${log.vol}cl @ ${log.abv}%</div>
+                        </div>
+                    </div>
+                    <button onclick="deleteLog(${log.id})" class="text-slate-500 hover:text-red-400 p-1.5 transition" title="Supprimer">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+                logContainer.appendChild(item);
+            });
+        }
+
+        function renderLeaderboard() {
+            const leaderboardList = document.getElementById('leaderboardList');
+            const totalPartyEPEl = document.getElementById('totalPartyEP');
+            if (!leaderboardList) return;
+            leaderboardList.innerHTML = '';
+
+            const ranking = appData.friends.map(friend => {
+                return {
+                    name: friend,
+                    ep: getFriendEPTotal(friend)
+                };
+            }).sort((a, b) => b.ep - a.ep);
+
+            const totalParty = ranking.reduce((acc, cur) => acc + cur.ep, 0);
+            if (totalPartyEPEl) totalPartyEPEl.innerText = `Total soirée: ${totalParty.toFixed(1)} EP`;
+
+            ranking.forEach((entry, idx) => {
+                const rankMedals = ['🥇', '🥈', '🥉'];
+                const rankDisplay = rankMedals[idx] || `#${idx + 1}`;
+                const status = THRESHOLDS.find(t => entry.ep <= t.max) || THRESHOLDS[THRESHOLDS.length - 1];
+
+                const row = document.createElement('div');
+                row.className = `p-3 rounded-xl border flex items-center justify-between text-xs ${
+                    entry.name === appData.activeFriend 
+                    ? 'bg-slate-800/80 border-amber-500/40' 
+                    : 'glass-card border-slate-800'
+                }`;
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-base font-bold">${rankDisplay}</span>
+                        <div>
+                            <div class="font-bold text-white flex items-center gap-1.5">
+                                ${entry.name}
+                                ${entry.name === appData.activeFriend ? '<span class="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded font-normal">Vous</span>' : ''}
+                            </div>
+                            <div class="text-[10px] text-slate-400">${status.emoji} ${status.title}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-black text-sm text-amber-400">${entry.ep.toFixed(1)}</span>
+                        <span class="text-[10px] text-slate-400"> EP</span>
+                    </div>
+                `;
+                leaderboardList.appendChild(row);
+            });
+        }
+
+        // Export Session File
+        function exportSession() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `ep_session_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // Import Session File
+        function importSession(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported && Array.isArray(imported.friends) && Array.isArray(imported.logs)) {
+                        appData = imported;
+                        if (!appData.customRecipes) appData.customRecipes = [];
+                        saveToStorage();
+                        renderFriendsList();
+                        renderSavedRecipes();
+                        updateUI();
+                        alert("Session chargée avec succès !");
+                    } else {
+                        alert("Fichier de session invalide.");
+                    }
+                } catch (err) {
+                    alert("Erreur lors de la lecture du fichier de session.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Tab switching
+            const presetsBtn = document.getElementById('tabPresetsBtn');
+            const customBtn = document.getElementById('tabCustomBtn');
+            const leaderboardBtn = document.getElementById('tabLeaderboardBtn');
+
+            const presetsSec = document.getElementById('tabPresets');
+            const customSec = document.getElementById('tabCustom');
+            const leaderboardSec = document.getElementById('tabLeaderboard');
+
+            function resetTabs() {
+                [presetsBtn, customBtn, leaderboardBtn].forEach(b => {
+                    if (b) b.className = 'flex-1 py-2 rounded-lg text-center text-slate-400 hover:text-white transition';
+                });
+                [presetsSec, customSec, leaderboardSec].forEach(s => {
+                    if (s) s.classList.add('hidden');
+                });
+            }
+
+            if (presetsBtn) {
+                presetsBtn.onclick = () => {
+                    resetTabs();
+                    presetsBtn.className = 'flex-1 py-2 rounded-lg text-center transition bg-amber-500 text-slate-950 shadow-md font-bold';
+                    presetsSec.classList.remove('hidden');
+                };
+            }
+
+            if (customBtn) {
+                customBtn.onclick = () => {
+                    resetTabs();
+                    customBtn.className = 'flex-1 py-2 rounded-lg text-center transition bg-amber-500 text-slate-950 shadow-md font-bold';
+                    customSec.classList.remove('hidden');
+                };
+            }
+
+            if (leaderboardBtn) {
+                leaderboardBtn.onclick = () => {
+                    resetTabs();
+                    leaderboardBtn.className = 'flex-1 py-2 rounded-lg text-center transition bg-amber-500 text-slate-950 shadow-md font-bold';
+                    leaderboardSec.classList.remove('hidden');
+                };
+            }
+
+            // Format Modal Close
+            const closeFormatModalBtn = document.getElementById('closeFormatModal');
+            if (closeFormatModalBtn) {
+                closeFormatModalBtn.onclick = () => {
+                    document.getElementById('formatModal').classList.add('hidden');
+                };
+            }
+
+            // Spirit Base Selection Logic
+            const spiritSelect = document.getElementById('spiritPresetSelect');
+            const baseSpiritABVInput = document.getElementById('baseSpiritABV');
+
+            if (spiritSelect && baseSpiritABVInput) {
+                spiritSelect.onchange = () => {
+                    if (spiritSelect.value !== 'custom') {
+                        baseSpiritABVInput.value = spiritSelect.value;
+                    }
+                    updateCocktailPreview();
+                };
+
+                baseSpiritABVInput.oninput = () => {
+                    if (spiritSelect) spiritSelect.value = 'custom';
+                    updateCocktailPreview();
+                };
+            }
+
+            // Cocktail Slider Events
+            const ratioSlider = document.getElementById('cocktailRatioSlider');
+            const cocktailVolume = document.getElementById('cocktailVolume');
+
+            if (ratioSlider) ratioSlider.oninput = updateCocktailPreview;
+            if (cocktailVolume) cocktailVolume.oninput = updateCocktailPreview;
+
+            const addCocktailBtn = document.getElementById('addCocktailBtn');
+            if (addCocktailBtn) {
+                addCocktailBtn.onclick = () => {
+                    const params = getCocktailParams();
+                    const nameInput = document.getElementById('cocktailName');
+                    const spiritSelect = document.getElementById('spiritPresetSelect');
+                    const selectedSpiritText = spiritSelect && spiritSelect.value !== 'custom'
+                        ? spiritSelect.options[spiritSelect.selectedIndex].text.split('(')[0].trim()
+                        : 'Cocktail';
+
+                    const customName = nameInput ? nameInput.value.trim() : '';
+                    const cocktailDisplayName = customName !== '' 
+                        ? `${customName} (${params.preset.ratioText})` 
+                        : `${selectedSpiritText} (${params.preset.ratioText})`;
+
+                    // Consommer la boisson
+                    addDrink(cocktailDisplayName, params.vol, params.effectiveABV);
+
+                    // Sauvegarde automatique dans les recettes si pas encore existante
+                    saveCustomRecipe(cocktailDisplayName, params.vol, params.effectiveABV);
+
+                    if (nameInput) nameInput.value = '';
+                };
+            }
+
+            // Custom Calculation Preview Live Updates
+            const cVol = document.getElementById('customVolume');
+            const cAbv = document.getElementById('customABV');
+            const cPreview = document.getElementById('customCalcPreview');
+
+            function updateCustomPreview() {
+                const vol = parseFloat(cVol.value) || 0;
+                const abv = parseFloat(cAbv.value) || 0;
+                const ep = calculateEP(vol, abv);
+                if (cPreview) cPreview.innerText = `${ep} EP`;
+            }
+
+            if (cVol) cVol.oninput = updateCustomPreview;
+            if (cAbv) cAbv.oninput = updateCustomPreview;
+
+            // Submit Custom Drink
+            const addCustomDrinkBtn = document.getElementById('addCustomDrinkBtn');
+            if (addCustomDrinkBtn) {
+                addCustomDrinkBtn.onclick = () => {
+                    const nameInput = document.getElementById('customName');
+                    const name = nameInput ? nameInput.value.trim() || 'Boisson Perso' : 'Boisson Perso';
+                    const vol = parseFloat(cVol ? cVol.value : 0);
+                    const abv = parseFloat(cAbv ? cAbv.value : 0);
+
+                    if (!vol || vol <= 0 || isNaN(abv) || abv < 0) {
+                        alert('Veuillez entrer un volume valide et un degré d\'alcool.');
+                        return;
+                    }
+
+                    // Consommer la boisson
+                    addDrink(name, vol, abv);
+
+                    // Sauvegarde automatique dans les recettes
+                    saveCustomRecipe(name, vol, abv);
+
+                    if (nameInput) nameInput.value = '';
+                    if (cVol) cVol.value = '';
+                    if (cAbv) cAbv.value = '';
+                    if (cPreview) cPreview.innerText = '0.0 EP';
+                };
+            }
+
+            // Modals Logic
+            const addFriendModal = document.getElementById('addFriendModal');
+            const openAddFriendBtn = document.getElementById('openAddFriendModal');
+            const closeAddFriendBtn = document.getElementById('closeAddFriendModal');
+            
+            if (openAddFriendBtn) openAddFriendBtn.onclick = () => addFriendModal.classList.remove('hidden');
+            if (closeAddFriendBtn) closeAddFriendBtn.onclick = () => addFriendModal.classList.add('hidden');
+
+            const saveFriendBtn = document.getElementById('saveFriendBtn');
+            if (saveFriendBtn) {
+                saveFriendBtn.onclick = () => {
+                    const input = document.getElementById('newFriendName');
+                    const newName = input ? input.value.trim() : '';
+                    if (newName && !appData.friends.includes(newName)) {
+                        appData.friends.push(newName);
+                        appData.activeFriend = newName;
+                        saveToStorage();
+                        renderFriendsList();
+                        updateUI();
+                        if (input) input.value = '';
+                        addFriendModal.classList.add('hidden');
+                    }
+                };
+            }
+
+            const infoModal = document.getElementById('infoModal');
+            const infoBtn = document.getElementById('infoBtn');
+            const closeInfoModalBtn1 = document.getElementById('closeInfoModal');
+            const closeInfoModalBtn2 = document.getElementById('closeInfoModalBtn');
+
+            if (infoBtn) infoBtn.onclick = () => infoModal.classList.remove('hidden');
+            if (closeInfoModalBtn1) closeInfoModalBtn1.onclick = () => infoModal.classList.add('hidden');
+            if (closeInfoModalBtn2) closeInfoModalBtn2.onclick = () => infoModal.classList.add('hidden');
+
+            // Save / Export & Import Session Actions
+            const exportBtn = document.getElementById('exportSessionBtn');
+            if (exportBtn) exportBtn.onclick = exportSession;
+
+            const importFileInput = document.getElementById('importFileInput');
+            const importBtn = document.getElementById('importSessionBtn');
+            if (importBtn && importFileInput) {
+                importBtn.onclick = () => importFileInput.click();
+                importFileInput.onchange = importSession;
+            }
+
+            // Reset Session
+            const resetBtn = document.getElementById('resetSessionBtn');
+            if (resetBtn) {
+                resetBtn.onclick = () => {
+                    if (confirm('Voulez-vous vraiment réinitialiser toutes les consommations de la soirée ?')) {
+                        appData.logs = [];
+                        saveToStorage();
+                        renderFriendsList();
+                        updateUI();
+                    }
+                };
+            }
+        }
+    </script>
+</body>
+</html>
